@@ -9,16 +9,18 @@ import git
 
 class TimeWarp:
 
-    def __init__(self, commit, folder="time_warps", verbose=True):
+    def __init__(self, commit, chdir=False, folder="time_warps", verbose=True):
         self.repo = git.Repo(search_parent_directories=True)
         self.folder = folder
         self.commit = commit
         self.git_dir = f"{self.folder}/commit_{self.commit}"
-
+        self.chdir = chdir
+        
         self.old_sys_path = None
         self.old_mods = None
         self.old_cwd = None
 
+        print(self.folder)
         os.makedirs(self.folder, exist_ok=True)
         if not os.path.exists(self.git_dir):
             if verbose:
@@ -36,21 +38,23 @@ class TimeWarp:
         
         os.chdir(old_cwd)
 
-    def __enter__(self, chdir=False):
+    def __enter__(self):
 
         self.old_sys_path = sys.path
         sys.path = [ os.path.abspath(self.git_dir) ] + sys.path
 
+        repo_folder = self.repo.git.rev_parse("--show-toplevel")
         self.old_mods = {}
         for key, val in list(sys.modules.items()):
             try:
-                if "simplebind" in inspect.getfile(val):
-                    old_mods[key] = val
+                if repo_folder in inspect.getfile(val):
+                    self.old_mods[key] = val
+                    # print(f"Removing imported module {key} ({val})")
                     del sys.modules[key]
             except TypeError:
                 pass
 
-        if chdir:
+        if self.chdir:
             self.old_cwd = os.getcwd()
             os.chdir(self.git_dir)
             
@@ -64,6 +68,10 @@ class TimeWarp:
         sys.path = self.old_sys_path
         for key, val in self.old_mods.items():
             sys.modules[key] = val
+
+        self.old_sys_path = None
+        self.old_mods = None
+        self.old_cwd = None
     
     def import_module(self, module):
         assert self.old_sys_path is not None and self.old_mods is not None, "A TimeWarp object must be entered before you can start importing modules"
