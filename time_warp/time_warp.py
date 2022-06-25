@@ -1,6 +1,5 @@
 import os
 import sys
-import shutil
 import subprocess
 import inspect
 from importlib import import_module
@@ -20,7 +19,6 @@ class TimeWarp:
         self.old_mods = None
         self.old_cwd = None
 
-        print(self.folder)
         os.makedirs(self.folder, exist_ok=True)
         if not os.path.exists(self.git_dir):
             if verbose:
@@ -28,15 +26,16 @@ class TimeWarp:
             proc = subprocess.run(["git", "clone", self.repo.remote().url, self.git_dir], capture_output=True)
             proc.check_returncode()
 
-        old_cwd = os.getcwd()        
-        os.chdir(self.git_dir)
-        
-        if verbose:
-            print(f"checking out {self.commit}")
-        proc = subprocess.run(["git", "checkout", self.commit], capture_output=True)
-        proc.check_returncode()
-        
-        os.chdir(old_cwd)
+            old_cwd = os.getcwd()
+            try:
+                os.chdir(self.git_dir)
+                
+                if verbose:
+                    print(f"checking out {self.commit}")
+                proc = subprocess.run(["git", "checkout", self.commit], capture_output=True)
+                proc.check_returncode()
+            finally:
+                os.chdir(old_cwd)
 
     def __enter__(self):
 
@@ -73,7 +72,16 @@ class TimeWarp:
         self.old_mods = None
         self.old_cwd = None
     
-    def import_module(self, module):
-        assert self.old_sys_path is not None and self.old_mods is not None, "A TimeWarp object must be entered before you can start importing modules"
-        return import_module(f"{self.folder}.commit_{self.commit}.{module}")
-            
+try:
+    import wandb
+
+    class TimeWarpWandB(TimeWarp):
+        
+        def __init__(self, project, run_id, **kwargs):
+            self.api = wandb.Api()
+            self.project = project
+            self.run = self.api.run(f"{project}/{run_id}")
+            super().__init__(self.run.commit, **kwargs)
+
+except ImportError:
+    pass
