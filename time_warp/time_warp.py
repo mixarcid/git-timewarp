@@ -9,7 +9,7 @@ import git
 
 class TimeWarp:
 
-    def __init__(self, commit, folder="time_warps"):
+    def __init__(self, commit, folder="time_warps", verbose=True):
         self.repo = git.Repo(search_parent_directories=True)
         self.folder = folder
         self.commit = commit
@@ -21,15 +21,19 @@ class TimeWarp:
 
         os.makedirs(self.folder, exist_ok=True)
         if not os.path.exists(self.git_dir):
-            print(f"cloning {self.repo.remote().url} to {self.git_dir}")
+            if verbose:
+                print(f"cloning {self.repo.remote().url} to {self.git_dir}")
             proc = subprocess.run(["git", "clone", self.repo.remote().url, self.git_dir], capture_output=True)
             proc.check_returncode()
 
         old_cwd = os.getcwd()        
         os.chdir(self.git_dir)
-        print(f"checking out {self.commit}")
+        
+        if verbose:
+            print(f"checking out {self.commit}")
         proc = subprocess.run(["git", "checkout", self.commit], capture_output=True)
         proc.check_returncode()
+        
         os.chdir(old_cwd)
 
     def __enter__(self, chdir=False):
