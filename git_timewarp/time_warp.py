@@ -6,9 +6,9 @@ from importlib import import_module
 
 import git
 
-class TimeWarp:
+class GitTimeWarp:
 
-    def __init__(self, commit, chdir=False, folder="time_warps", verbose=True):
+    def __init__(self, commit, chdir=False, folder="timewarps", verbose=True):
         self.repo = git.Repo(search_parent_directories=True)
         self.folder = folder
         self.commit = commit
@@ -75,7 +75,7 @@ class TimeWarp:
 try:
     import wandb
 
-    class TimeWarpWandB(TimeWarp):
+    class WandBTimeWarp(GitTimeWarp):
         
         def __init__(self, project, run_id, **kwargs):
             self.api = wandb.Api()
